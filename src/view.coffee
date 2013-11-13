@@ -16,11 +16,42 @@ do (window) ->
 
   subviewCounter = 0
 
-  class View extends jQuery
+  if window.jQuery
 
-    elements.forEach (tagName) ->
-      View[tagName] = (args...) ->
-        @currentBuilder.tag tagName, args...
+    class Dependency extends jQuery
+
+      constructor: (html) ->
+        console.log @constructor.fn.init.call(this, html).constructor
+
+      # 覆盖 jQuery 的 pushStack 和 end 方法
+      pushStack: (elems) ->
+        # Build a new jQuery matched element set
+        ret = jQuery.merge jQuery(), elems
+        # Add the old object onto the stack (as a reference)
+        ret.prevObject = this
+        ret.context = @context
+        # Return the newly-formed element set
+        return ret
+
+      end: ->
+        @prevObject or jQuery null
+
+
+  if window.Zepto
+
+    class Dependency extends Zepto
+
+      constructor: (html) ->
+        console.log @constructor.zepto.init.call(this, html).constructor
+
+
+# Base View Class
+  class View extends Dependency
+
+    for tagName in elements
+      do (tagName) ->
+        View[tagName] = (args...) ->
+          @currentBuilder.tag tagName, args...
 
     @text: (string) ->
       @currentBuilder.text string
@@ -38,7 +69,7 @@ do (window) ->
 
     constructor: (args...) ->
       [html, subviewBinders] = @constructor.buildHTML -> @content args...
-      @constructor.fn.init.call this, html
+      super html
       @bindExports this
       @bindEventHandlers this
       subview this for subview in subviewBinders
@@ -56,7 +87,7 @@ do (window) ->
           else
             element
     bindEventHandlers: (view) ->
-      events.forEach (eventName) ->
+      for eventName in events
         selector = "[#{eventName}]"
         elements = view.find(selector).add view.filter(selector)
         elements.each ->
@@ -65,18 +96,8 @@ do (window) ->
           element.attr eventName, null
           element.on eventName, (event) -> view[method] event, element
 
-    ###
-    # 覆盖 jQuery 的 pushStack 和 end 方法
-    ###
-    pushStack: (elems) ->
-      ret = jQuery.merge jQuery(), elems
-      ret.prevObject = this
-      ret.context = @context
-      return ret
 
-    end: ->
-      @prevObject or jQuery null
-
+  # Builder Class
   class Builder
 
     constructor: ->
@@ -87,18 +108,24 @@ do (window) ->
       [@documents.join(''), @subviewBinders]
 
     parseOptions: (args) ->
-      option = attr: {}
-      args.forEach (arg) ->
+      option = attr : {}
+      for arg in args
         switch typeof arg
           when 'string'
             unless attrAlias[arg[0]]
               option.text = arg
             else
-              # todo 这里不能解析多个同名属性，需要重写
               for alias, attrName of attrAlias
-                arg = arg.replace eval("/\\#{alias}/g"), "\",\"#{attrName}\":\""
-              arg = '{' + arg[2..-1] + '"}'
-              $.extend option.attr, JSON.parse arg
+                arg = arg.replace eval("/\\#{alias}/g"), ",#{attrName}:"
+              attr = {}
+              for argPair in arg[1..-1].split /,/
+                [key, val] = argPair.split ':'
+                attr[key] =
+                  if attr[key]
+                    attr[key] + " #{val}"
+                  else
+                    val
+              $.extend option.attr, attr
           when 'number'
             option.text = arg.toString()
           when 'object'
@@ -113,9 +140,9 @@ do (window) ->
 
       if tagName in voidElements then return
       options.content?()
-      @text options.text if options.text
+      @text options.text       if options.text
       @text options.attr?.text if options.attr?.text
-      @raw options.attr?.raw if options.attr?.raw
+      @raw options.attr?.raw   if options.attr?.raw
 
       @closeTag tagName
 

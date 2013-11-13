@@ -4,7 +4,7 @@ var __hasProp = {}.hasOwnProperty,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 (function(window) {
-  var Builder, View, attrAlias, elements, events, subviewCounter, voidElements;
+  var Builder, Dependency, View, attrAlias, elements, events, subviewCounter, voidElements;
   elements = 'a abbr acronym address applet area article aside audio b base basefont bdi bdo bgsound big blink blockquote body br button canvas caption center cite code col colgroup content data datalist dd decorator del details dfn dir div dl dt em embed fieldset figcaption figure font footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins isindex kbd keygen label legend li link listing main map mark marquee menu menuitem meta meter nav nobr noframes noscript object ol optgroup option output p param plaintext pre progress q rp rt ruby s samp script section select shadow small source spacer span strike strong style sub summary sup table tbody td template textarea tfoot th thead time title tr track tt u ul var video wbr xmp'.split(' ');
   voidElements = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
   events = 'blur change click dblckick error focus focusin focusout hover keydown keypress keyup load mousedown mouseenter mouseleave mousemove mouseout mouseover mouseup resize scroll select submit unload'.split(' ');
@@ -14,16 +14,58 @@ var __hasProp = {}.hasOwnProperty,
     '$': 'exports'
   };
   subviewCounter = 0;
+  if (window.jQuery) {
+    Dependency = (function(_super) {
+      __extends(Dependency, _super);
+
+      function Dependency(html) {
+        console.log(this.constructor.fn.init.call(this, html).constructor);
+      }
+
+      Dependency.prototype.pushStack = function(elems) {
+        var ret;
+        ret = jQuery.merge(jQuery(), elems);
+        ret.prevObject = this;
+        ret.context = this.context;
+        return ret;
+      };
+
+      Dependency.prototype.end = function() {
+        return this.prevObject || jQuery(null);
+      };
+
+      return Dependency;
+
+    })(jQuery);
+  }
+  if (window.Zepto) {
+    Dependency = (function(_super) {
+      __extends(Dependency, _super);
+
+      function Dependency(html) {
+        console.log(this.constructor.zepto.init.call(this, html).constructor);
+      }
+
+      return Dependency;
+
+    })(Zepto);
+  }
   View = (function(_super) {
+    var tagName, _fn, _i, _len;
+
     __extends(View, _super);
 
-    elements.forEach(function(tagName) {
+    _fn = function(tagName) {
       return View[tagName] = function() {
         var args, _ref;
         args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
         return (_ref = this.currentBuilder).tag.apply(_ref, [tagName].concat(__slice.call(args)));
       };
-    });
+    };
+    for (_i = 0, _len = elements.length; _i < _len; _i++) {
+      tagName = elements[_i];
+      _fn(tagName);
+    }
 
     View.text = function(string) {
       return this.currentBuilder.text(string);
@@ -46,16 +88,16 @@ var __hasProp = {}.hasOwnProperty,
     };
 
     function View() {
-      var args, html, subview, subviewBinders, _i, _len, _ref;
+      var args, html, subview, subviewBinders, _j, _len1, _ref;
       args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       _ref = this.constructor.buildHTML(function() {
         return this.content.apply(this, args);
       }), html = _ref[0], subviewBinders = _ref[1];
-      this.constructor.fn.init.call(this, html);
+      View.__super__.constructor.call(this, html);
       this.bindExports(this);
       this.bindEventHandlers(this);
-      for (_i = 0, _len = subviewBinders.length; _i < _len; _i++) {
-        subview = subviewBinders[_i];
+      for (_j = 0, _len1 = subviewBinders.length; _j < _len1; _j++) {
+        subview = subviewBinders[_j];
         subview(this);
       }
     }
@@ -74,11 +116,13 @@ var __hasProp = {}.hasOwnProperty,
     };
 
     View.prototype.bindEventHandlers = function(view) {
-      return events.forEach(function(eventName) {
-        var selector;
+      var eventName, selector, _j, _len1, _results;
+      _results = [];
+      for (_j = 0, _len1 = events.length; _j < _len1; _j++) {
+        eventName = events[_j];
         selector = "[" + eventName + "]";
         elements = view.find(selector).add(view.filter(selector));
-        return elements.each(function() {
+        _results.push(elements.each(function() {
           var element, method;
           element = $(this);
           method = element.attr(eventName);
@@ -86,30 +130,14 @@ var __hasProp = {}.hasOwnProperty,
           return element.on(eventName, function(event) {
             return view[method](event, element);
           });
-        });
-      });
-    };
-
-
-    /*
-    # 覆盖 jQuery 的 pushStack 和 end 方法
-    */
-
-    View.prototype.pushStack = function(elems) {
-      var ret;
-      ret = jQuery.merge(jQuery(), elems);
-      ret.prevObject = this;
-      ret.context = this.context;
-      return ret;
-    };
-
-    View.prototype.end = function() {
-      return this.prevObject || jQuery(null);
+        }));
+      }
+      return _results;
     };
 
     return View;
 
-  })(jQuery);
+  })(Dependency);
   Builder = (function() {
     function Builder() {
       this.documents = [];
@@ -121,33 +149,41 @@ var __hasProp = {}.hasOwnProperty,
     };
 
     Builder.prototype.parseOptions = function(args) {
-      var option;
+      var alias, arg, argPair, attr, attrName, key, option, val, _i, _j, _len, _len1, _ref, _ref1;
       option = {
         attr: {}
       };
-      args.forEach(function(arg) {
-        var alias, attrName;
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        arg = args[_i];
         switch (typeof arg) {
           case 'string':
             if (!attrAlias[arg[0]]) {
-              return option.text = arg;
+              option.text = arg;
             } else {
               for (alias in attrAlias) {
                 attrName = attrAlias[alias];
-                arg = arg.replace(eval("/\\" + alias + "/g"), "\",\"" + attrName + "\":\"");
+                arg = arg.replace(eval("/\\" + alias + "/g"), "," + attrName + ":");
               }
-              arg = '{' + arg.slice(2) + '"}';
-              return $.extend(option.attr, JSON.parse(arg));
+              attr = {};
+              _ref = arg.slice(1).split(/,/);
+              for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+                argPair = _ref[_j];
+                _ref1 = argPair.split(':'), key = _ref1[0], val = _ref1[1];
+                attr[key] = attr[key] ? attr[key] + (" " + val) : val;
+              }
+              $.extend(option.attr, attr);
             }
             break;
           case 'number':
-            return option.text = arg.toString();
+            option.text = arg.toString();
+            break;
           case 'object':
-            return $.extend(option.attr, arg);
+            $.extend(option.attr, arg);
+            break;
           case 'function':
-            return option.content = arg;
+            option.content = arg;
         }
-      });
+      }
       return option;
     };
 

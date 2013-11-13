@@ -31,6 +31,5 @@ class SubDemo extends View
 console.time 'View'
 demo = new Demo title: 'demo', subTitle: 'sub demo'
 console.timeEnd 'View'
-console.log demo
 
 $('#main').append demo

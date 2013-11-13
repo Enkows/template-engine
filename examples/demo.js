@@ -92,6 +92,4 @@ demo = new Demo({
 
 console.timeEnd('View');
 
-console.log(demo);
-
 $('#main').append(demo);
