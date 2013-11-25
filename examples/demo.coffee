@@ -3,7 +3,7 @@ class Demo extends View
     @header '#header.head.visible', '$head', =>
       @div param.title, click: 'demoClick'
       @nav '.wrapper.top', '$wrapper', =>
-        @subview 'subview', new SubDemo param.subTitle
+        @subview 'subview', SubDemo.render param.subTitle
         @ul '.second', =>
           @li =>
             @a '.icon-link.message-link', '消息', 'href': '#!/message/list?target=story'
@@ -29,7 +29,7 @@ class SubDemo extends View
     console.log 'sub view click'
 
 console.time 'View'
-demo = new Demo title: 'demo', subTitle: 'sub demo'
+demo = Demo.render title: 'demo', subTitle: 'sub demo'
 console.timeEnd 'View'
 
 $('#main').append demo

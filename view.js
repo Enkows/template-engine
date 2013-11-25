@@ -1,10 +1,8 @@
-var __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  __slice = [].slice,
+var __slice = [].slice,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 (function(window) {
-  var Builder, Dependency, View, attrAlias, elements, events, subviewCounter, voidElements;
+  var Builder, View, attrAlias, elements, events, subviewCounter, voidElements;
   elements = 'a abbr acronym address applet area article aside audio b base basefont bdi bdo bgsound big blink blockquote body br button canvas caption center cite code col colgroup content data datalist dd decorator del details dfn dir div dl dt em embed fieldset figcaption figure font footer form frame frameset h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins isindex kbd keygen label legend li link listing main map mark marquee menu menuitem meta meter nav nobr noframes noscript object ol optgroup option output p param plaintext pre progress q rp rt ruby s samp script section select shadow small source spacer span strike strong style sub summary sup table tbody td template textarea tfoot th thead time title tr track tt u ul var video wbr xmp'.split(' ');
   voidElements = 'area base br col command embed hr img input keygen link meta param source track wbr'.split(' ');
   events = 'blur change click dblckick error focus focusin focusout hover keydown keypress keyup load mousedown mouseenter mouseleave mousemove mouseout mouseover mouseup resize scroll select submit unload'.split(' ');
@@ -14,46 +12,8 @@ var __hasProp = {}.hasOwnProperty,
     '$': 'exports'
   };
   subviewCounter = 0;
-  if (window.jQuery) {
-    Dependency = (function(_super) {
-      __extends(Dependency, _super);
-
-      function Dependency(html) {
-        console.log(this.constructor.fn.init.call(this, html).constructor);
-      }
-
-      Dependency.prototype.pushStack = function(elems) {
-        var ret;
-        ret = jQuery.merge(jQuery(), elems);
-        ret.prevObject = this;
-        ret.context = this.context;
-        return ret;
-      };
-
-      Dependency.prototype.end = function() {
-        return this.prevObject || jQuery(null);
-      };
-
-      return Dependency;
-
-    })(jQuery);
-  }
-  if (window.Zepto) {
-    Dependency = (function(_super) {
-      __extends(Dependency, _super);
-
-      function Dependency(html) {
-        console.log(this.constructor.zepto.init.call(this, html).constructor);
-      }
-
-      return Dependency;
-
-    })(Zepto);
-  }
-  View = (function(_super) {
+  View = (function() {
     var tagName, _fn, _i, _len;
-
-    __extends(View, _super);
 
     _fn = function(tagName) {
       return View[tagName] = function() {
@@ -87,18 +47,29 @@ var __hasProp = {}.hasOwnProperty,
       return this.currentBuilder.buildHTML();
     };
 
+    View.render = function() {
+      var args, view;
+      args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      view = (function(func, args, ctor) {
+        ctor.prototype = func.prototype;
+        var child = new ctor, result = func.apply(child, args);
+        return Object(result) === result ? result : child;
+      })(this, args, function(){});
+      return view.view;
+    };
+
     function View() {
       var args, html, subview, subviewBinders, _j, _len1, _ref;
       args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       _ref = this.constructor.buildHTML(function() {
         return this.content.apply(this, args);
       }), html = _ref[0], subviewBinders = _ref[1];
-      View.__super__.constructor.call(this, html);
-      this.bindExports(this);
-      this.bindEventHandlers(this);
+      this.view = $(html);
+      this.bindExports(this.view);
+      this.bindEventHandlers(this.view);
       for (_j = 0, _len1 = subviewBinders.length; _j < _len1; _j++) {
         subview = subviewBinders[_j];
-        subview(this);
+        subview(this.view);
       }
     }
 
@@ -137,7 +108,7 @@ var __hasProp = {}.hasOwnProperty,
 
     return View;
 
-  })(Dependency);
+  })();
   Builder = (function() {
     function Builder() {
       this.documents = [];

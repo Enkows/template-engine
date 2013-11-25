@@ -16,37 +16,8 @@ do (window) ->
 
   subviewCounter = 0
 
-  if window.jQuery
-
-    class Dependency extends jQuery
-
-      constructor: (html) ->
-        console.log @constructor.fn.init.call(this, html).constructor
-
-      # 覆盖 jQuery 的 pushStack 和 end 方法
-      pushStack: (elems) ->
-        # Build a new jQuery matched element set
-        ret = jQuery.merge jQuery(), elems
-        # Add the old object onto the stack (as a reference)
-        ret.prevObject = this
-        ret.context = @context
-        # Return the newly-formed element set
-        return ret
-
-      end: ->
-        @prevObject or jQuery null
-
-
-  if window.Zepto
-
-    class Dependency extends Zepto
-
-      constructor: (html) ->
-        console.log @constructor.zepto.init.call(this, html).constructor
-
-
 # Base View Class
-  class View extends Dependency
+  class View
 
     for tagName in elements
       do (tagName) ->
@@ -67,12 +38,16 @@ do (window) ->
       fn.call this
       @currentBuilder.buildHTML()
 
+    @render: (args...) ->
+      view = new this args...
+      return view.view
+
     constructor: (args...) ->
       [html, subviewBinders] = @constructor.buildHTML -> @content args...
-      super html
-      @bindExports this
-      @bindEventHandlers this
-      subview this for subview in subviewBinders
+      @view = $ html
+      @bindExports @view
+      @bindEventHandlers @view
+      subview @view for subview in subviewBinders
 
     bindExports: (view) ->
       selector = "[exports]"
@@ -86,6 +61,7 @@ do (window) ->
             $.merge view[exports], element
           else
             element
+
     bindEventHandlers: (view) ->
       for eventName in events
         selector = "[#{eventName}]"
