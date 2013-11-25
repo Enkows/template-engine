@@ -48,6 +48,7 @@ do (window) ->
       @bindExports @view
       @bindEventHandlers @view
       subview @view for subview in subviewBinders
+      @initialize?()
 
     bindExports: (view) ->
       selector = "[exports]"
