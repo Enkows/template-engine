@@ -17,7 +17,7 @@ Demo = (function(_super) {
         click: 'demoClick'
       });
       return _this.nav('.wrapper.top', '$wrapper', function() {
-        _this.subview('subview', new SubDemo(param.subTitle));
+        _this.subview('subview', SubDemo.render(param.subTitle));
         return _this.ul('.second', function() {
           _this.li(function() {
             return _this.a('.icon-link.message-link', '消息', {
@@ -85,13 +85,11 @@ SubDemo = (function(_super) {
 
 console.time('View');
 
-demo = new Demo({
+demo = Demo.render({
   title: 'demo',
   subTitle: 'sub demo'
 });
 
 console.timeEnd('View');
-
-console.log(demo);
 
 $('#main').append(demo);

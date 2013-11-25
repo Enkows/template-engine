@@ -1,6 +1,4 @@
-var __hasProp = {}.hasOwnProperty,
-  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-  __slice = [].slice,
+var __slice = [].slice,
   __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
 (function(window) {
@@ -14,16 +12,20 @@ var __hasProp = {}.hasOwnProperty,
     '$': 'exports'
   };
   subviewCounter = 0;
-  View = (function(_super) {
-    __extends(View, _super);
+  View = (function() {
+    var tagName, _fn, _i, _len;
 
-    elements.forEach(function(tagName) {
+    _fn = function(tagName) {
       return View[tagName] = function() {
         var args, _ref;
         args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
         return (_ref = this.currentBuilder).tag.apply(_ref, [tagName].concat(__slice.call(args)));
       };
-    });
+    };
+    for (_i = 0, _len = elements.length; _i < _len; _i++) {
+      tagName = elements[_i];
+      _fn(tagName);
+    }
 
     View.text = function(string) {
       return this.currentBuilder.text(string);
@@ -45,18 +47,29 @@ var __hasProp = {}.hasOwnProperty,
       return this.currentBuilder.buildHTML();
     };
 
+    View.render = function() {
+      var args, view;
+      args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      view = (function(func, args, ctor) {
+        ctor.prototype = func.prototype;
+        var child = new ctor, result = func.apply(child, args);
+        return Object(result) === result ? result : child;
+      })(this, args, function(){});
+      return view.view;
+    };
+
     function View() {
-      var args, html, subview, subviewBinders, _i, _len, _ref;
+      var args, html, subview, subviewBinders, _j, _len1, _ref;
       args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
       _ref = this.constructor.buildHTML(function() {
         return this.content.apply(this, args);
       }), html = _ref[0], subviewBinders = _ref[1];
-      this.constructor.fn.init.call(this, html);
-      this.bindExports(this);
-      this.bindEventHandlers(this);
-      for (_i = 0, _len = subviewBinders.length; _i < _len; _i++) {
-        subview = subviewBinders[_i];
-        subview(this);
+      this.view = $(html);
+      this.bindExports(this.view);
+      this.bindEventHandlers(this.view);
+      for (_j = 0, _len1 = subviewBinders.length; _j < _len1; _j++) {
+        subview = subviewBinders[_j];
+        subview(this.view);
       }
     }
 
@@ -74,11 +87,13 @@ var __hasProp = {}.hasOwnProperty,
     };
 
     View.prototype.bindEventHandlers = function(view) {
-      return events.forEach(function(eventName) {
-        var selector;
+      var eventName, selector, _j, _len1, _results;
+      _results = [];
+      for (_j = 0, _len1 = events.length; _j < _len1; _j++) {
+        eventName = events[_j];
         selector = "[" + eventName + "]";
         elements = view.find(selector).add(view.filter(selector));
-        return elements.each(function() {
+        _results.push(elements.each(function() {
           var element, method;
           element = $(this);
           method = element.attr(eventName);
@@ -86,30 +101,14 @@ var __hasProp = {}.hasOwnProperty,
           return element.on(eventName, function(event) {
             return view[method](event, element);
           });
-        });
-      });
-    };
-
-
-    /*
-    # 覆盖 jQuery 的 pushStack 和 end 方法
-    */
-
-    View.prototype.pushStack = function(elems) {
-      var ret;
-      ret = jQuery.merge(jQuery(), elems);
-      ret.prevObject = this;
-      ret.context = this.context;
-      return ret;
-    };
-
-    View.prototype.end = function() {
-      return this.prevObject || jQuery(null);
+        }));
+      }
+      return _results;
     };
 
     return View;
 
-  })(jQuery);
+  })();
   Builder = (function() {
     function Builder() {
       this.documents = [];
@@ -121,33 +120,41 @@ var __hasProp = {}.hasOwnProperty,
     };
 
     Builder.prototype.parseOptions = function(args) {
-      var option;
+      var alias, arg, argPair, attr, attrName, key, option, val, _i, _j, _len, _len1, _ref, _ref1;
       option = {
         attr: {}
       };
-      args.forEach(function(arg) {
-        var alias, attrName;
+      for (_i = 0, _len = args.length; _i < _len; _i++) {
+        arg = args[_i];
         switch (typeof arg) {
           case 'string':
             if (!attrAlias[arg[0]]) {
-              return option.text = arg;
+              option.text = arg;
             } else {
               for (alias in attrAlias) {
                 attrName = attrAlias[alias];
-                arg = arg.replace(eval("/\\" + alias + "/g"), "\",\"" + attrName + "\":\"");
+                arg = arg.replace(eval("/\\" + alias + "/g"), "," + attrName + ":");
               }
-              arg = '{' + arg.slice(2) + '"}';
-              return $.extend(option.attr, JSON.parse(arg));
+              attr = {};
+              _ref = arg.slice(1).split(/,/);
+              for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
+                argPair = _ref[_j];
+                _ref1 = argPair.split(':'), key = _ref1[0], val = _ref1[1];
+                attr[key] = attr[key] ? attr[key] + (" " + val) : val;
+              }
+              $.extend(option.attr, attr);
             }
             break;
           case 'number':
-            return option.text = arg.toString();
+            option.text = arg.toString();
+            break;
           case 'object':
-            return $.extend(option.attr, arg);
+            $.extend(option.attr, arg);
+            break;
           case 'function':
-            return option.content = arg;
+            option.content = arg;
         }
-      });
+      }
       return option;
     };
 

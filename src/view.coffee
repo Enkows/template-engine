@@ -16,11 +16,13 @@ do (window) ->
 
   subviewCounter = 0
 
-  class View extends jQuery
+# Base View Class
+  class View
 
-    elements.forEach (tagName) ->
-      View[tagName] = (args...) ->
-        @currentBuilder.tag tagName, args...
+    for tagName in elements
+      do (tagName) ->
+        View[tagName] = (args...) ->
+          @currentBuilder.tag tagName, args...
 
     @text: (string) ->
       @currentBuilder.text string
@@ -36,12 +38,16 @@ do (window) ->
       fn.call this
       @currentBuilder.buildHTML()
 
+    @render: (args...) ->
+      view = new this args...
+      return view.view
+
     constructor: (args...) ->
       [html, subviewBinders] = @constructor.buildHTML -> @content args...
-      @constructor.fn.init.call this, html
-      @bindExports this
-      @bindEventHandlers this
-      subview this for subview in subviewBinders
+      @view = $ html
+      @bindExports @view
+      @bindEventHandlers @view
+      subview @view for subview in subviewBinders
 
     bindExports: (view) ->
       selector = "[exports]"
@@ -55,8 +61,9 @@ do (window) ->
             $.merge view[exports], element
           else
             element
+
     bindEventHandlers: (view) ->
-      events.forEach (eventName) ->
+      for eventName in events
         selector = "[#{eventName}]"
         elements = view.find(selector).add view.filter(selector)
         elements.each ->
@@ -65,18 +72,8 @@ do (window) ->
           element.attr eventName, null
           element.on eventName, (event) -> view[method] event, element
 
-    ###
-    # 覆盖 jQuery 的 pushStack 和 end 方法
-    ###
-    pushStack: (elems) ->
-      ret = jQuery.merge jQuery(), elems
-      ret.prevObject = this
-      ret.context = @context
-      return ret
 
-    end: ->
-      @prevObject or jQuery null
-
+  # Builder Class
   class Builder
 
     constructor: ->
@@ -87,8 +84,8 @@ do (window) ->
       [@documents.join(''), @subviewBinders]
 
     parseOptions: (args) ->
-      option = attr: {}
-      args.forEach (arg) ->
+      option = attr : {}
+      for arg in args
         switch typeof arg
           when 'string'
             unless attrAlias[arg[0]]
@@ -119,9 +116,9 @@ do (window) ->
 
       if tagName in voidElements then return
       options.content?()
-      @text options.text if options.text
+      @text options.text       if options.text
       @text options.attr?.text if options.attr?.text
-      @raw options.attr?.raw if options.attr?.raw
+      @raw options.attr?.raw   if options.attr?.raw
 
       @closeTag tagName
 
