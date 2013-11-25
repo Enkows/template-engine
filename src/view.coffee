@@ -94,11 +94,17 @@ do (window) ->
             unless attrAlias[arg[0]]
               option.text = arg
             else
-              # todo 这里不能解析多个同名属性，需要重写
               for alias, attrName of attrAlias
-                arg = arg.replace eval("/\\#{alias}/g"), "\",\"#{attrName}\":\""
-              arg = '{' + arg[2..-1] + '"}'
-              $.extend option.attr, JSON.parse arg
+                arg = arg.replace eval("/\\#{alias}/g"), ",#{attrName}:"
+              attr = {}
+              for argPair in arg[1..-1].split /,/
+                [key, val] = argPair.split ':'
+                attr[key] =
+                  if attr[key]
+                    attr[key] + " #{val}"
+                  else
+                    val
+              $.extend option.attr, attr
           when 'number'
             option.text = arg.toString()
           when 'object'
