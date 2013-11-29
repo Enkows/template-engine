@@ -39,18 +39,21 @@ do (window) ->
       @currentBuilder.buildHTML()
 
     @render: (args...) ->
+      console.time 'Render Time'
       view = new this args...
+      console.timeEnd 'Render Time'
       return view.view
 
     constructor: (args...) ->
       [html, subviewBinders] = @constructor.buildHTML -> @content args...
       @view = $ html
-      @bindExports @view
-      @bindEventHandlers @view
+      @bindExports this
+      @bindEventHandlers this
       subview @view for subview in subviewBinders
       @initialize?()
 
-    bindExports: (view) ->
+    bindExports: (viewObj) ->
+      view = viewObj.view
       selector = "[exports]"
       elements = view.find(selector).add view.filter(selector)
       elements.each ->
@@ -63,7 +66,8 @@ do (window) ->
           else
             element
 
-    bindEventHandlers: (view) ->
+    bindEventHandlers: (viewObj) ->
+      view = viewObj.view
       for eventName in events
         selector = "[#{eventName}]"
         elements = view.find(selector).add view.filter(selector)
@@ -71,7 +75,7 @@ do (window) ->
           element = $ this
           method = element.attr eventName
           element.attr eventName, null
-          element.on eventName, (event) -> view[method] event, element
+          element.on eventName, (event) -> viewObj[method] event, element
 
 
   # Builder Class

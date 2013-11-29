@@ -83,13 +83,9 @@ SubDemo = (function(_super) {
 
 })(View);
 
-console.time('View');
-
 demo = Demo.render({
   title: 'demo',
   subTitle: 'sub demo'
 });
-
-console.timeEnd('View');
 
 $('#main').append(demo);

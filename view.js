@@ -50,11 +50,13 @@ var __slice = [].slice,
     View.render = function() {
       var args, view;
       args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+      console.time('Render Time');
       view = (function(func, args, ctor) {
         ctor.prototype = func.prototype;
         var child = new ctor, result = func.apply(child, args);
         return Object(result) === result ? result : child;
       })(this, args, function(){});
+      console.timeEnd('Render Time');
       return view.view;
     };
 
@@ -70,6 +72,9 @@ var __slice = [].slice,
       for (_j = 0, _len1 = subviewBinders.length; _j < _len1; _j++) {
         subview = subviewBinders[_j];
         subview(this.view);
+      }
+      if (typeof this.initialize === "function") {
+        this.initialize();
       }
     }
 
